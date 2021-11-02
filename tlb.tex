@@ -1,0 +1,42 @@
+\section{TLB}
+\label{sec:tlb}
+
+The translation process involves a number of memory read, which may incur a long latency.
+The IOMMU can optionally include a Translation Look-aside Buffer(TLB) to cache
+translation table walk results. The number of the entry in the TLB is implementation
+defined.
+
+The TLB entries are tagged by the VMID field and the ASID field in the translation
+descriptor. If a device is only subject to one stage of translation, the VMID is assumed
+to be zero. If a device is only subject to stage two translation, the ASID is assumed to
+be zero.
+
+The IOMMU provides the invalidate register \invltlb\ to flush the designated entry in
+the TLB. The \invltlb\ register is in the command MMIO range.
+
+A write to the \invltlb\ with the value of the RSID of a device invalidates the cached
+content of the table structures for that device.
+
+% Prefetching for lower latency
+
+% TODO: can it cache device table entries?
+
+\subsection{TLB Organization}
+
+The TLB implemented by the IOMMU could be of a single or multiple hierarchy, and could be
+a monolithic or distributed configuration. However, from the software's point of view, the
+IOMMU does not expose the internal structure of the TLB and behave as if there is no TLB.
+It is up to the implementation to ensure that all subcomponents of the TLB operate in a
+coherent manner.
+
+\subsection{Other Caching Consideration}
+
+The address translation by IOMMU involves a potentially large number of memory accesses,
+which may incur a large amount of delay when the TLB misses. It is recommended to
+implement further caching mechanism to minimize the delay during walking the
+memory-resident table structures. The implementation is required to maintain the
+coherency of the caches.
+
+\note One straightforward design is simply caching the most-recently used table entry.
+\noteend
+

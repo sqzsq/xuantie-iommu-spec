@@ -1,0 +1,24 @@
+\section{Working with IOPMP}
+
+The IOMMU and the IOPMP complement each other and provide in-depth defense against
+malicious DMA request by malicious devices.
+
+The current design of IOMMU has full control over the permission granted to each device.
+However,when the device table's V bit is cleared, the device obtains direct access to
+physical memory.Furthermore, future version of the IOMMU is expected to work with the
+Address Translation Service (ATS) of the PCI-Express. ATS allows devices to mark DMA
+requests as 'translated' so that the IOMMU simply passes the requests to the
+interconnects. This is a potential security hole because a malicious device can always
+mark any DMA requests as 'translated'.
+
+In this case, the IOMMU can pair with the IOPMP which specify which physical address range
+is allowed for a given device, even if the request is marked as translated, the IOPMP will
+be able to deny the access.
+
+\subsection{Built-in IOPMP}
+
+%TODO
+The translation descriptor can be optionally extended with the pmpcfg and pmpaddr field
+for that device. They follow the same format as defined in the PMP in the RISC-V
+Privileged Architecture. After the translation is complete, the output physical address is
+compared with the pmpcfg and pmpaddr entries for further checks. 

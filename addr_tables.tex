@@ -1,0 +1,90 @@
+\section{Address Tables}
+\label{sec:addr_tbl}
+
+The Address Tables are memory resident structure. They are of the same format as the
+MMU page table defined by the RISC-V Privileged Architecture. The IOMMU support
+Sv32, Sv39 and Sv48 translation modes. The various page sizes are supported.
+
+Despite of the same format, the IOMMU does not utilize all of the attribute bits in the
+table entries. Depending on the features supported, certain bits are ignored by the IOMMU.
+The rest of the section provides the details.
+
+The address tables are selected by the look-up in the device tables. The IOMMU walks the
+address tables, performing access permission checks along the way and produces a physical
+address or raises a fault condition for a particular translation request.
+
+% Sharing of the tables are possible but not without consequences.
+
+\subsection{One-Stage Address Translation}
+
+For one-stage translation, the IOMMU initiate the page table walk from the table pointed
+to by the Stage One Control field in the translation descriptor. If the transaction is a read,
+the R bit in the leaf address table must be set for the read permission to be granted.
+Likewise, if the transaction is a write, both R bit and W bit must be set.
+
+Optionally, if the transaction is of execute type, the X bit must be set in the address
+table entries.
+
+\note The exact meaning of the access type is up to the individual device to define. Not
+all types of the access are available on a given platform. \noteend
+
+When the originating device distinguishes privileged access and unprivileged access, for
+example, an AXI bus that supports distinction between normal or privileged access,
+transactions that are marked as privileged are only allowed if the U bit is cleared.
+Likewise, transactions that are marked as unprivileged are only allowed if the U bit is
+set.
+
+% TODO: not sure about if SUM is needed
+
+If the G bit is set, this translation is global.
+
+The A bit and the D bit must be set for any access to succeed. Otherwise the IOMMU raises a fault.
+
+\note For ease of implementation, the A bit and D bit are required to be set. In future
+versions, the capability to set the bits by the IOMMU will be considered. \noteend
+
+\subsection{Two-Stage Address Translation}
+
+When the second stage of translation is enabled, all the addresses in the first stage
+translation are treated as guest physical addresses and are subject to translation with
+the stage-two address tables.
+
+For a translation to succeed in granting the permissions requested in the translation
+request during two-stage translation, the permission requested by the device must be
+granted in the leaf address table entry in both stages. If the permission is not granted
+in any of the stages, the IOMMU raises a fault.
+
+The memory accesses to the entries in the stage-one address tables are treated as read
+accesses, therefore, the entries in the last-level stage-two address table that map the
+pages that contain the stage-one address table entries must have the R bit set. Otherwise,
+the IOMMU raises a fault.
+
+If privileged transaction is supported, the privileged access is only applicable in the
+first stage of the translation. The U bit in the stage-one address table entries should be
+setup in the same manner as if there is only one stage of translation. The IOMMU raises a
+fault when either the access is privileged but the U bit is set, or the access is
+unprivileged but the U bit is not set. The memory accesses for the translation of the
+stage-one addresses are always considered unprivileged.  Therefore, the U bit in the
+second stage address table entries should be set. Otherwise, the IOMMU raises a fault.
+
+The G bit in the stage-two address table entries is ignored by hardware.
+
+\note It is unlikely that the hypervisor assigns a device to be shared by all virtual
+machines. \noteend
+
+The A bit and the D bit must be set for any access to succeed. Otherwise the IOMMU raises a fault.
+
+\subsubsection{Software Emulation}
+
+To emulate an IOMMU for a virtual machine, the hypervisor allocates pages the size of
+register MMIO range and map the pages at the standard address inside the GPA space. The
+hypervisor then fills the base address of these pages to the stage-one bits field in the
+corresponding device table for that originating device assigned to a virtual machine.
+
+Subsequent operation on the emulated register IOMMU range by the virtual machine does not
+cause traps.
+
+When the guest invalidates the IOMMU cache after alteration of the tables, the access to
+the command MMIO range is trapped by the host. The host performs the invalidation on
+behalf of the guest.
+

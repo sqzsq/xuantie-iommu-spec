@@ -1,0 +1,20 @@
+\section{Ordering Considerations}
+
+Since the IOMMU works in the transparent configuration, it is required to behave as much
+as how a wire behave. In addition, the IOMMU conforms to the ordering constraint of the
+bus it is interfacing with. For example, AXI bus requires that ``all transactions with a
+given ID must ordered, but there is no restriction on the ordering of transactions with
+different IDs''. The IOMMU is therefore required to maintain order only within a given
+RSID.
+
+This implies that if the IOMMU supports pause-mode of fault reporting and if any of the
+transactions with a given ID faults, all subsequent transactions should be suspended until
+the fault is handled. This requirement implies that the IOMMU implementation should be
+able to buffer all subsequent transactions before the fault is handled. The number of
+transactions that need to be buffered is highly implementation dependent, and is left for
+each implementation to decide.
+
+Handling the fault may result in canceling the transaction either directly by the IOMMU or
+by the software, in this case, the IOMMU returns error for all subsequent transactions
+with the same RSID.
+

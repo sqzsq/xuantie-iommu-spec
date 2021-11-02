@@ -1,0 +1,139 @@
+\documentclass[12pt]{article}
+\usepackage[margin=1in]{geometry}
+\usepackage{graphicx}
+
+% copied from riscv-isa-manual
+\usepackage{longtable}
+\usepackage{multirow}
+\usepackage{array}
+
+% Commands for register format figures.
+
+% New column types to use in tabular environment for instruction formats.
+% Allocate 0.18in per bit.
+\newcolumntype{I}{>{\centering\arraybackslash}p{0.18in}}
+% Two-bit centered column.
+\newcolumntype{W}{>{\centering\arraybackslash}p{0.36in}}
+% Three-bit centered column.
+\newcolumntype{F}{>{\centering\arraybackslash}p{0.54in}}
+% Four-bit centered column.
+\newcolumntype{Y}{>{\centering\arraybackslash}p{0.72in}}
+% Five-bit centered column.
+\newcolumntype{R}{>{\centering\arraybackslash}p{0.9in}}
+% Six-bit centered column.
+\newcolumntype{S}{>{\centering\arraybackslash}p{1.08in}}
+% Seven-bit centered column.
+\newcolumntype{O}{>{\centering\arraybackslash}p{1.26in}}
+% Eight-bit centered column.
+\newcolumntype{E}{>{\centering\arraybackslash}p{1.44in}}
+% Ten-bit centered column.
+\newcolumntype{T}{>{\centering\arraybackslash}p{1.8in}}
+% Twelve-bit centered column.
+\newcolumntype{N}{>{\centering\arraybackslash}p{2.02in}}
+% Fifteen-bit centered column.
+\newcolumntype{M}{>{\centering\arraybackslash}p{2.2in}}
+% Sixteen-bit centered column.
+\newcolumntype{K}{>{\centering\arraybackslash}p{2.88in}}
+% Twenty-bit centered column.
+\newcolumntype{U}{>{\centering\arraybackslash}p{3.6in}}
+% Twenty-bit centered column.
+\newcolumntype{L}{>{\centering\arraybackslash}p{3.6in}}
+% Twenty-five-bit centered column.
+\newcolumntype{J}{>{\centering\arraybackslash}p{4.5in}}
+
+
+\newcommand{\instbit}[1]{\mbox{\scriptsize #1}}
+\newcommand{\instbitrange}[2]{~\instbit{#1} \hfill \instbit{#2}~}
+
+\newcommand{\wiri}{\textbf{WIRI}}
+\newcommand{\wpri}{\textbf{WPRI}}
+\newcommand{\wlrl}{\textbf{WLRL}}
+\newcommand{\warl}{\textbf{WARL}}
+
+% end of copied from riscv-isa-manual
+
+\newcommand{\note}{\vspace{1em}\textbf{NOTE: }}
+\newcommand{\noteend}{\vspace{1em}}
+\newcommand{\consider}{\textbf{CONSIDER: }}
+
+\newcommand{\idWidth}{{6}}
+\newcommand{\iommucap}{\textit{iommucap}}
+\newcommand{\iommucapen}{\textit{iommucapen}}
+\newcommand{\rsidlen}{\textit{RSIDLEN}}
+\newcommand{\rsiddiv}{\textit{rsiddiv}}
+\newcommand{\ersiddiv}{\textit{ersiddiv}}
+\newcommand{\dtbase}{\textit{dtbase}}
+\newcommand{\iommucause}{\textit{iommcause}}
+\newcommand{\ftval}{\textit{ftval}}
+\newcommand{\ftdevid}{\textit{ftdevid}}
+\newcommand{\invltlb}{\textit{invltlb}}
+\newcommand{\iommucfg}{\textit{iommucfg}}
+\newcommand{\resume}{\textit{resume}}
+\newcommand{\resumetype}{\textit{resumetype}}
+\newcommand{\iommuintno}{\textit{iommuintno}}
+\newcommand{\iommuinten}{\textit{iommuinten}}
+\newcommand{\dtlen}{\textit{DTLEN}}
+\newcommand{\dte}{\textit{dte}}
+
+
+\begin{document}
+
+\title{Xuantie IOMMU Specification Version 1.0 (Draft)}
+\author{Siqi Zhao}
+\maketitle
+
+
+This document describes an IOMMU design specification for the Xuantie platform, which is
+based on harts of the RISC-V architecture.
+
+An IOMMU is used to translate virtual addresses in DMA requests from external devices
+connected on certain peripheral bus to physical addresses. Abstractly, for all addresses
+that can be accessed by an entity identified by a source ID, the IOMMU maintains a relation
+from the tuple (source ID, virtual address) to a physical address.
+
+The source ID identifies the entity that initiates DMA operations. The exact meaning of
+the entity is dependent on the peripheral bus that the IOMMU is
+interfaced with. For example, when the IOMMU is used to translate virtual addresses from
+a PCI-Express device, the entity may refers to the \textit{device functions} in the
+PCI-Express device. For simplicity, the rest of this document refers to such an entity as
+a device. It is also assumed that one device is only capable of generating DMA operations
+tagged with one unique identifier.
+
+\note It is up to the implementation to define the exact entity that the term 'device'
+refers to. \noteend
+
+The IOMMU utilizes a table structure to maintain the aforementioned
+mapping relation. The table structure could be implemented as register arrays or as memory
+resident data structure. The table structure consists of multiple levels of tables. There are two
+types of tables, the upper levels are IOMMU-specific look-up tables indexed by the source
+IDs. The lower level tables contain entries that are the same as the page table entries as
+defined in the RISC-V privileged architecture.
+
+\note Typically, peripheral devices assigned to a virtual machine can also send interrupts
+that target the harts of that virtual machine, and these interrupts need to be routed as
+well, however, this design only specifies the DMA address translations. For interrupts,
+the Advanced Interrupt Architecture (AIA) already includes the capability to redirect
+interrupts from the devices to specific harts.\noteend
+
+The address translation can be performed with either one stage or two stages. An operating
+system kernel may utilize one-stage translation to directly assigned a device to a
+process. A hypervisor may utilize the second stage of the two-stage translation to assign
+a device to a virtual machine (VM), while the kernel in the VM may utilize the first stage
+to further assign the device to processes. Any stage of the translation can be identity
+mapping, i.e., no translation in effect.
+
+The IOMMU can optionally implement a translation buffer that caches recent translation
+entries. 
+
+\include{arch}
+\include{interface}
+\include{dev_config}
+\include{addr_trans}
+\include{addr_tables}
+\include{fault_reporting}
+\include{tlb}
+\include{ordering}
+\include{iopmp}
+\include{list_of_registers}
+
+\end{document}

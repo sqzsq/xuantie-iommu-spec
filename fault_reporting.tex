@@ -1,0 +1,266 @@
+\section{Fault Reporting}
+\label{sec:fault}
+
+\subsection{Operation Mode}
+
+The IOMMU operates in one of two modes of error reporting. In \textit{abort-mode}, the
+IOMMU terminates the translation and reports the fault to software. It is configurable for
+each device whether and how the IOMMU notifies the device that initiated a faulting
+transaction.
+
+In \textit{pause-mode}, the IOMMU maintains the state of the faulting transaction before
+reporting the fault to software. After handling the fault, the software has the option to
+terminate the transaction or resume from the point where the fault occurred.
+
+The mode in which the IOMMU operates in depends on the translation step that the IOMMU is
+currently performing. During device table walk, regardless of translation stage, the IOMMU
+always operates in abort-mode, albeit the IOMMU still reports the stage during which the
+fault is raised. During the address table walk, the IOMMU operates
+according to the configuration in the translation descriptor for that device, as specified
+in Section \ref{sec:trans_desc}.
+
+\note The device table entries are system-wide configurations, usually set up by the
+kernel or the hypervisor. Faults during the device table walk may indicates system-wide
+issues, such issues are usually not fixed in a dynamic manner. In contrast, the address
+tables are much more dynamic structures, pause-mode allows runtime adjustment to them.
+\noteend
+
+In pause-mode, the IOMMU pauses any translation that raises a fault. The in-flight
+transaction remains in the state of \textit{in-progress}. The software is required to
+resolved the fault and notify the IOMMU that a particular transaction can move forward.
+The software has the option to terminate or retry the transaction.
+
+In pause-mode, the IOMMU maintains state information about in-progress transactions for an
+\textit{implementation defined} number of devices.  The behavior of the IOMMU when the
+storage space for the state information is used up is \textit{implementation defined}. It
+is also up to the implementation to specify whether more than one paused transaction
+simultaneously is allowed.
+
+\subsubsection{Fault Reporting with One Translation Stages}
+
+When the IOMMU is only performing one stage of translation, it operates in abort-mode when
+walking the device tables. It works in the mode configured by the translation descriptor
+when walking the address tables.
+
+\subsubsection{Fault Reporting with Two Translation Stages}
+
+When the IOMMU is performing two stages of translation, the behavior when the IOMMU is
+walking in the stage-2 translation structures, i.e., the host device tables and the
+stage-2 address tables, is the same as when the IOMMU is only performing one stage of
+translation. When the IOMMU is walking the stage-1 structures, the default behavior is the
+same as the stage-2 behavior, however, the host can override the behavior in the
+translation descriptor.
+
+
+\subsection{Fault Reporting Registers}
+
+The IOMMU generates an interrupt when a fault is raised during the translation. A command
+MMIO range register \iommuinten\ is provided to enable the interrupt from the IOMMU. When
+the E bit is one, the interrupt is enabled. When the register is zero, the interrupt is
+suppressed. The format of the \iommuinten\ register is shown in Figure
+\ref{fig:iommuinten}.
+
+\begin{figure}[h!t]
+    \begin{center}
+        \begin{tabular}{@{}Jc@{}I}
+    \instbitrange{63}{1} &
+    \instbit{0} \\
+    \hline
+    \multicolumn{1}{|c|}{Reserved} &
+    \multicolumn{1}{c| }{E} \\
+    \hline
+    63 & 1 \\
+
+    \end{tabular}
+    \end{center}
+
+    \caption{The \iommuinten\ Register}
+    \label{fig:iommuinten}
+\end{figure}
+
+
+\note The capability to control the interrupt is for batch process of possible multiple
+faults that occurs at the same time. The handler can suppress the interrupt during the
+handling, and checks if there are other faults before returning, a known technique. \noteend
+
+The interrupt number is provided in the register MMIO range register called \iommuintno.
+The hardware may choose to hardwire this register. In the case that the platform is
+equipped with an AIA interrupt controller, this interrupt number is the minor entity
+assigned to the IOMMU in any way that is appropriate. The format of this register is shown
+in Figure \ref{fig:iommuintno}.
+
+\begin{figure}[h!t]
+    \begin{center}
+        \begin{tabular}{@{}Jc}
+    \instbitrange{63}{0} \\
+    \hline
+    \multicolumn{1}{| c | }{IntNo} \\
+    \hline
+    64 \\
+
+    \end{tabular}
+    \end{center}
+
+    \caption{The \iommuintno\ Register}
+    \label{fig:iommuintno}
+\end{figure}
+
+
+\note The platform can choose to implement the interrupt with any implementation defined
+approach. For example, if AIA is implemented, the IOMMU may generate an MSI to the IMSIC
+of a hart. If the platform uses the PLIC, the interrupt can be reported as interrupt
+routed through the PLIC. \noteend
+
+The read-only register in the register MMIO range \iommucause\, shown in Figure
+\ref{fig:iommucause}, provide the code for the
+fault reason. Table \ref{tbl:fault_reasons} provides all the reason codes. 
+
+The RSID field provide the ID of the device that raised the fault. The V bit of \iommucause\
+indicates if there is a pending fault that needs to be handled.  A read to \iommucause\
+has the side-effect of clearing the V bit if there is no other pending fault.
+
+\begin{figure}[h!t]
+    \begin{center}
+        \begin{tabular}{@{}I@{}M@{}M@{}S}
+    \instbit{63} &
+    \instbitrange{62}{RSIDLEN + 16} &
+    \instbitrange{RSIDLEN + 15}{16} &
+    \instbitrange{15}{0} \\
+    \hline
+    \multicolumn{1}{|c|}{V} &
+    \multicolumn{1}{c|}{Reserved} &
+    \multicolumn{1}{c|}{RSID} &
+    \multicolumn{1}{c| }{Cause} \\
+    \hline
+    1 &  & RSIDLEN & 16 \\
+
+    \end{tabular}
+    \end{center}
+
+    \caption{The \iommucause\ Register}
+    \label{fig:iommucause}
+\end{figure}
+
+The read-only register in the register MMIO range \ftval\ provide additional data for the
+relevant fault, e.g. the address of the entry that caused the fault. The \ftval\ register
+is shown in Figure \ref{fig:ftval}.
+
+\begin{figure}[h!t]
+    \begin{center}
+        \begin{tabular}{@{}Jc}
+    \instbitrange{63}{0} \\
+    \hline
+    \multicolumn{1}{| c | }{Value} \\
+    \hline
+    64 \\
+
+    \end{tabular}
+    \end{center}
+
+    \caption{The \ftval\ Register}
+    \label{fig:ftval}
+\end{figure}
+
+Once a request is paused, the IOMMU remains inactive for the device that caused the fault.
+It returns failure for all subsequent memory requests from the faulting device until a
+write is performed to the command MMIO range register \resume\ with the RSID of the
+faulting device. The IOMMU then proceed with the previously-faulted transaction caused by
+the device with the written RSID. If a RSID is written, however, there is no such
+transaction that previously faulted, the IOMMU ignores the write.
+
+\begin{figure}[h!t]
+    \begin{center}
+        \begin{tabular}{@{}I@{}M@{}N}
+    \instbit{63} &
+    \instbitrange{62}{RSIDLEN} &
+    \instbitrange{RSIDLEN - 1}{0} \\
+    \hline
+    \multicolumn{1}{|c|}{T} &
+    \multicolumn{1}{c|}{Reserved} &
+    \multicolumn{1}{c|}{RSID} \\
+    \hline
+    1 & & RSIDLEN \\
+
+    \end{tabular}
+    \end{center}
+
+    \caption{The \resume\ Register}
+    \label{fig:resume}
+\end{figure}
+
+
+The T bit in the \resume\ register is provided for software to specify the type of
+resumption.  A value of zero means to terminate the transaction. A value of one means to
+retry the faulting translation. When the IOMMU is notified to terminate the transaction,
+it returns an error to the device that initiates the transaction. It is up to the device
+to decide if it is necessary to re-initiate the same transaction. When the IOMMU is
+notified to resume the transaction, the IOMMU restarts the entire translation process as
+if it is a newly received transaction.
+
+\note When a fault occurs, there are usually other device-specific operations needed to
+completely handle the fault. It is up to the specific device and the corresponding device
+driver to address them. \noteend
+
+\subsection{Direct Delivery of Fault Interrupt to VM}
+
+The IOMMU maybe designed to work with two types of interrupt systems, the legacy PLIC and
+the AIA.
+
+When PLIC is used, a separate interrupt is not provided when the two-stage translation is supported.
+The reasoning is that if such an interrupt is provided, the hypervisor might attempt to
+directly assign the interrupt for reporting stage-one translation faults to a guest VM.
+However, currently the \ftval\ register is in the register MMIO range, the hypervisor
+needs to move this data to the memory page that emulates the register MMIO range for the
+IOMMU for the guest anyway. A trap is inevitable. Therefore an extra interrupt number is
+not needed.
+
+When AIA is used, the IOMMU does have the option to directly deliver
+virtual interrupts when a fault is encountered during the first stage of translation. It
+may do so by implementing the MSI translation tables defined by the AIA and send MSIs
+directly to the IMSIC registers designated to the VM.
+
+To minimize number of traps the VM encounters during handling of the interrupt, in
+addition to update the \ftval\ register, the IOMMU
+also needs to perform a write to the 8-bytes starting of the offset of the \ftval\
+register within the register MMIO range inside the register MMIO page. The write provide
+the same value that is written into the \ftval\ register. Subsequently, the VM does not
+trap when reading from the emulated register MMIO range.
+
+%how about interrupt control? that still traps?
+
+
+\begin{table}
+    \centering
+    \begin{tabular}{| p{0.05\linewidth} | p{0.95\linewidth} |}
+        \hline
+         Code  & Reason \\
+        \hline
+         1      & Reserved bits are not zero in the device table entries \\
+        \hline
+         2      & The S bit is set in a device table entry, however, the translation descriptor contains zeros for S2MODE field \\
+        \hline
+         21     & R bit is not set in the stage-one address table entry for a read transaction \\
+        \hline
+         22     & W bit is not set in the stage-one address table entry for a write transaction  \\
+        \hline
+         23     & X bit and R bit are not both set in the stage-one address table entry for an execute transaction \\
+        \hline
+         24     & U bit is set in the stage-one address table entry for a privileged transaction \\
+        \hline
+         25     & U bit is not set in the stage-one address table entry for an unprivileged transaction \\
+        \hline
+         26     & A bit and D bit are not both set in a stage-one address table entry \\
+        \hline
+         51    & R bit is not set in the stage-two address table entry for a read transaction \\
+        \hline
+         52    & W bit is not set in the stage-two address table entry for a write transaction \\
+        \hline
+         53    & X bit and R bit are not both set in the stage-two address table entry for an execute transaction \\
+        \hline
+         54    & U bit is set in the stage-two address table entries \\
+        \hline
+    \end{tabular}
+    \caption{List of Fault Reasons During Address Table Walk}
+    \label{tbl:fault_reasons}
+\end{table}
+
