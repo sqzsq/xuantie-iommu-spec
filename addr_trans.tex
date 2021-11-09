@@ -51,12 +51,12 @@ lists the bits that are used by the IOMMU.
 
 \subsubsection{Translation with the Second Stage}
 
-When S2MODE is not zero, stage-two translation is enabled. The RPAddr field in the Stage
-One Control field contains the PPN of the memory space, called register MMIO page,
-allocated by the system software, e.g a hypervisor, as the register MMIO range for the
-virtual machine. The bytes inside the register MMIO page at the offset of \dtbase\
-contains the guest PPN for the device table defined by the virtual machine, with which the
-it may define further translation tables.
+When S2MODE is not zero, stage-two translation is enabled. The RPAddr (Register Page
+Address) field in the Stage One Control field contains the PPN of the memory space, called
+register MMIO page, allocated by the system software, e.g a hypervisor, as the register
+MMIO range for the virtual machine. The bytes inside the register MMIO page at the offset
+of \dtbase\ contains the guest PPN for the device table defined by the virtual machine,
+with which the it may define further translation tables.
 
 \note The system software may also choose to not expose an IOMMU to the virtual machine,
 in which case the system software simply provide a dummy register MMIO page for the
@@ -88,14 +88,13 @@ synchronization on the IOMMU TLB. The details of the IOMMU TLB is provided in Se
     \label{fig:two-stage-trans}
 \end{figure}
 
-% TODO: fake device ID for guest VM
-On a translation request, the IOMMU obtains from the host device table the guest device
-table base address, read the \textit{dtbase} value from the memory page allocated by the
-hypervisor, then walks the address tables pointed to by the guest device table. For each
-step in the table walk, the GPAs are translated by the stage-two translation tables
-pointed to by the host device table entry. At the end of the table walk, the IOMMU
-produces a physical address for the translation request. Figure \ref{fig:two-stage-trans}
-illustrate the process. Note that the device table look ups are simplified. 
+On a translation request, the IOMMU obtains from the host device table the register page
+base address, read the \textit{dtbase} value from the register page, then walks the
+address tables pointed to by the guest device table. For each step in the table walk, the
+GPAs are translated by the stage-two translation tables pointed to by the host device
+table entry. At the end of the table walk, the IOMMU produces a physical address for the
+translation request. Figure \ref{fig:two-stage-trans} illustrate the process. Note that
+the device table look ups are simplified. 
 
 If there's any fault detected during the table walk, the IOMMU may report the fault as
 described in Section \ref{sec:fault} depending on the nature of the fault and the
