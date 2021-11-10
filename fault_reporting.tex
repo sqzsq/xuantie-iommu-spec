@@ -111,6 +111,28 @@ approach. For example, if AIA is implemented, the IOMMU may generate an MSI to t
 of a hart. If the platform uses the PLIC, the interrupt can be reported as interrupt
 routed through the PLIC. \noteend
 
+If the IOMMU includes AIA support, the translation descriptor is extended to include the
+base address of the MSI page tables, the MSI address mask and the MSI address pattern. As
+shown in Table \ref{tbl:aia-fields}
+
+\begin{table}[h!t]
+    \centering
+    \begin{tabular}{ | l | l | }
+
+    \hline
+    Bit 192 - 255   & MSI Address Table Base Address \\
+    \hline
+    Bit 256 - 319   & MSI Address Mask \\
+    \hline
+    Bit 320 - 383   & MSI Address Pattern \\
+    \hline
+
+    \end{tabular}
+    \caption{AIA Related Bits in Translation Descriptor}
+    \label{tbl:aia-fields}
+\end{table}
+
+
 The read-only register in the register MMIO range \iommucause\, shown in Figure
 \ref{fig:iommucause}, provide the code for the
 fault reason. Table \ref{tbl:fault_reasons} provides all the reason codes. 
