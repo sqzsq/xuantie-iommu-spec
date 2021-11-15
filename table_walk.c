@@ -15,7 +15,7 @@ void translate(rsid_t rsid, u64 input_addr, at_t access_type, u64* output_addr, 
     u64 rsid_lo;
     u64 out_dte;
     u64 dtbase; rsiddiv
-        int do_stage_one = do_stage_two = 0;
+    int do_stage_one = do_stage_two = 0;
     u64 s1_atp, s2_atp, dev_conf;
 
     if (!stage2)
