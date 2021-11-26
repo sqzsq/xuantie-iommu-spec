@@ -22,11 +22,17 @@ The identifier for the incoming translation requests is termed a Requester Sourc
 
 \subsection{Source Identification}
 
-The RSID is split into two parts for use in the device table look-up, RISDHI and
-RSIDLO. The MMIO register called \rsiddiv\ specifies the split point. When \rsiddiv\ stores
-value $N$, RSIDLO is RSID[$N-1$:$0$] and RSIDHI is RSID[$\rsidlen - 1$, $N$]. The
-\rsiddiv\ register is \warl, an implementation can hardwire this register to a fixed
-value. When \rsiddiv is zero, RSIDHI equals RSID and RSIDLO is not defined.
+The RSID can be optionally split into two parts for use in the device table look-up,
+RSIDHI and RSIDLO. The MMIO register called \rsiddiv\ specifies the split point. The
+\rsiddiv\ register is \warl.
+
+The \rsiddiv\ stores one of two possible values, zero or eight. When \rsiddiv\ stores zero,
+the RSID is effectively not split, and the device table lookup consists of only one level.
+
+When \rsiddiv\ stores eight, the effective split is after RSID[8]. The device table lookup
+consists of two levels. The RSIDLO is RSID[0:$\rsidlen - 8$] and the RSIDHI is
+RSID[$\rsidlen\ - 8$:$\rsidlen - 1$].
+
 
 The \rsidlen\ is implementation defined. It should be at least such a length so that it is
 capable to contain the all the IDs of the bus that the IOMMU is intended to work with.
@@ -45,10 +51,14 @@ case the RSID should be at least as long as the concatenated ID.\noteend
 \subsubsection{Memory Resident Device Table}
 \label{sec:mem_dt}
 
-The device tables are 8-byte aligned arrays of 8-byte aligned entries called
-\textit{device table entries}.
+The device tables are 4K-byte aligned arrays of 8-byte aligned entries. The entries are
+called \textit{device table entries}.
 
-When \rsiddiv\ is not zero, there are two levels of device tables. The level-1 device
+\note Choosing 4K-byte aligned unifies the size of the table structures, simplifying the
+design. By aligning them with pages, enforcing access checks on the device tables is also
+easier. \noteend
+
+When \rsiddiv\ is eight, there are two levels of device tables. The level-1 device
 tables are indexed by RSIDHI, and the level-2 device tables are indexed by RSIDLO. The
 level-1 device table entries contains the base address of the corresponding level-2 device
 table. The level-2 device table entries point to \textit{translation descriptors} for that
@@ -58,23 +68,22 @@ base address of the top level page table and other control bits.
 When \rsiddiv\ is zero, there is only one level of device table index by RSID. The entries
 point to the translation descriptor for that device with the RSID.
 
-If the IOMMU implements the memory resident device table support, it provides an
-MMIO register called \dtbase\ that holds the 8-byte aligned physical address of the
-level-1 device table in the memory. The \dtbase\ register resides in the register MMIO
-range.
+The IOMMU provides an MMIO register called \dtbase\ that holds the 8-byte aligned physical
+address of the level-1 device table in the memory. The \dtbase\ register resides in the
+register MMIO range.
 
 The \dtbase\ register is defined in Figure \ref{fig:dtbase_reg}. 
 
 \begin{figure}[h!t]
     \begin{center}
-        \begin{tabular}{@{}Jc@{}F}
-    \instbitrange{63}{3} &
-    \instbitrange{2}{0} \\
+        \begin{tabular}{@{}J@{}T}
+    \instbitrange{63}{12} &
+    \instbitrange{11}{0} \\
     \hline
     \multicolumn{1}{|c|}{Addr} &
     \multicolumn{1}{c| }{Reserved} \\
     \hline
-    61 & 3 \\
+    52 & 12 \\
 
     \end{tabular}
     \end{center}
@@ -83,23 +92,23 @@ The \dtbase\ register is defined in Figure \ref{fig:dtbase_reg}.
     \label{fig:dtbase_reg}
 \end{figure}
 
-The Addr field store the 8-byte aligned physical address of the level-1 device table.
+The Addr field store the 4K-byte aligned physical address of the level-1 device table.
 
 When \rsiddiv\ is not zero, the device tables are multi-level structures. The level-1
-device table contains $2^{RSIDHI}$ entries that points to level-2 tables. The level-1
+device table contains $512$ entries that points to level-2 tables. The level-1
 device table is index by RSIDHI derived from the RSID. The level-1 device table entries
 are defined in Figure \ref{fig:lv1_dt_entry}.
 
 \begin{figure}[h!t]
     \begin{center}
-        \begin{tabular}{@{}Jc@{}F}
-    \instbitrange{63}{3} &
-    \instbitrange{2}{0} \\
+        \begin{tabular}{@{}J@{}T}
+    \instbitrange{63}{12} &
+    \instbitrange{11}{0} \\
     \hline
     \multicolumn{1}{|c|}{Addr} &
     \multicolumn{1}{c| }{Reserved} \\
     \hline
-    61 & 3 \\
+    52 & 12 \\
 
     \end{tabular}
     \end{center}
@@ -108,17 +117,18 @@ are defined in Figure \ref{fig:lv1_dt_entry}.
     \label{fig:lv1_dt_entry}
 \end{figure}
 
-The Addr field store the 8-byte aligned physical address of the level-2 device table.
+The Addr field store the 4K-byte aligned physical address of the level-2 device table.
 
 The Reserved bits must be zero, otherwise the IOMMU raises a fault.
 
-The level-2 device tables are 8-byte aligned tables indexed by RSIDLO. Each table contains
-$2^{RSIDLO}$ entries that points to an extended device table. The level-2 device table
+The level-2 device tables are 4K-byte aligned tables indexed by RSIDLO. Each table contains
+$512$ entries that points to a translation descriptor. Only the first $2^{RSIDLO}$ entries
+are used, the hardawre ignores the rest of the entries. The level-2 device table
 entries are defined in Figure \ref{fig:lv2_dt_entry}.
 
 \begin{figure}[h!t]
     \begin{center}
-        \begin{tabular}{@{}Jc@{}I@{}I@{}I}
+        \begin{tabular}{@{}J@{}I@{}I@{}I}
     \instbitrange{63}{3} &
     \instbit{2} &
     \instbit{1} &
@@ -204,7 +214,7 @@ The IOMMU uses the content of \dte[$x$] for the device with RSID value $x$ to ge
 address of the translation descriptor. The IOMMU zero-extend the content of the \dte[$x$]
 registers to generate the address of the translation descriptor.
 
-In this case, the \dtbase\ register is not defined.
+In this case, the \dtbase\ register contains the MMIO address of \dte[$0$].
 
 \subsection{Translation Descriptor}
 \label{sec:trans_desc}
