@@ -38,7 +38,7 @@ set.
 
 If the G bit is set, this translation is global.
 
-The A bit and the D bit must be set for any access to succeed. Otherwise the IOMMU raises a fault.
+The A bit and the D bit are ignored by the IOMMU.
 
 \note For ease of implementation, the A bit and D bit are required to be set. In future
 versions, the capability to set the bits by the IOMMU will be considered. \noteend
@@ -72,7 +72,7 @@ The G bit in the stage-two address table entries is ignored by hardware.
 \note It is unlikely that the hypervisor assigns a device to be shared by all virtual
 machines. \noteend
 
-The A bit and the D bit must be set for any access to succeed. Otherwise the IOMMU raises a fault.
+The A bit and the D bit are ignored by the IOMMU.
 
 \subsubsection{Software Emulation}
 
