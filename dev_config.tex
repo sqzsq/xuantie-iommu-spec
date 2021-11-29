@@ -128,18 +128,20 @@ entries are defined in Figure \ref{fig:lv2_dt_entry}.
 
 \begin{figure}[h!t]
     \begin{center}
-        \begin{tabular}{@{}J@{}I@{}I@{}I}
-    \instbitrange{63}{3} &
+        \begin{tabular}{@{}J@{}R@{}I@{}I@{}I}
+    \instbitrange{63}{12} &
+    \instbitrange{11}{3} &
     \instbit{2} &
     \instbit{1} &
     \instbit{0} \\
     \hline
     \multicolumn{1}{|c|}{Addr} &
+    \multicolumn{1}{c| }{Reserved} &
     \multicolumn{1}{c| }{F} &
     \multicolumn{1}{c| }{S} &
     \multicolumn{1}{c| }{V} \\
     \hline
-    61 & 1 & 1 & 1 \\
+    52 & 9 & 1 & 1 & 1 \\
 
     \end{tabular}
     \end{center}
@@ -148,7 +150,7 @@ entries are defined in Figure \ref{fig:lv2_dt_entry}.
     \label{fig:lv2_dt_entry}
 \end{figure}
 
-The Addr field store the 8-byte aligned address of the translation descriptor.
+The Addr field store the 4K-byte aligned address of the translation descriptor.
 
 The V bit controls if the address translation is enabled for the particular device
 identified by the RSID. If V bit is set, the address translation is in effect i.e. the
@@ -220,7 +222,8 @@ In this case, the \dtbase\ register contains the MMIO address of \dte[$0$].
 \label{sec:trans_desc}
 
 The translation descriptor contains the root address of the address tables. There are
-three parts in the descriptor, two of which corresponding to one translation stage.
+three parts in the descriptor, two of which corresponding to one translation stage. The
+translation descriptors are 4K-aligned structures.
 
 The translation descriptor format is shown in Table \ref{tbl:dev-tbl-bits}:
 
