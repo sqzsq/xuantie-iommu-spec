@@ -273,37 +273,6 @@ translation mode is effective. Its value should be consistent with the S bit in 
 table entry that points to this translation descriptor. Otherwise, the IOMMU raises a
 fault.
 
-If the S2MODE field is not zero, bits 0-63 contains the 4K-aligned physical page number of
-the register MMIO page for the IOMMU allocated by the hypervisor. The format is shown in
-Figure \ref{fig:stage-one-bits-in-dev-tbl-entry}. The Reserved bits must be set to zero,
-otherwise the IOMMU reports a fault.
-
-\note The register MMIO page can be hidden from the guest VM if the hypervisor intends to
-enforce only the second stage of translation. \noteend
-
-If the S2MODE field is not zero, bits 128-191 records the RSID used during the nested
-address translation. The device identifier presented to the guest VM might be different
-from the identifier used by the host, therefore, this field allows the host to override
-the RSID for the guest.
-
-\begin{figure}[ht!]
-
-    \begin{center}
-        \begin{tabular}{@{}T@{}K}
-        \instbitrange{63}{44} &
-        \instbitrange{43}{0} \\
-        \hline
-        \multicolumn{1}{|c|}{Reserved} &
-        \multicolumn{1}{ c|}{RPAddr} \\
-        \hline
-        20 & 44 \\
-        \end{tabular}
-    \end{center}
-
-    \caption{Stage One Control Field When S2MODE is not Zero}
-    \label{fig:stage-one-bits-in-dev-tbl-entry}
-\end{figure}
-
 When the S2MODE field is zero, bits 0-63 contains the 4K-aligned physical address of the
 first stage address table. Its format is adapted from the RV64 \textit{satp} CSR as shown
 in Figure \ref{fig:stage-one-bits-s2mode-zero}.
@@ -326,9 +295,39 @@ The Reserved bits must be zero, otherwise the IOMMU raises a fault.
     \end{tabular}
     \end{center}
 
-    \caption{Stage One Control Field in When S2MODE is Zero}
+    \caption{Stage One Control Field}
     \label{fig:stage-one-bits-s2mode-zero}
 \end{figure}
+
+If the S2MODE field is not zero, bits 0-63 contains the 4K-aligned physical page number of
+the stage-one address table page allocated by the guest VM. The format remain the same.
+The Reserved bits must be set to zero, otherwise the IOMMU reports a fault.
+
+%\note The register MMIO page can be hidden from the guest VM if the hypervisor intends to
+%enforce only the second stage of translation. \noteend
+
+%If the S2MODE field is not zero, bits 128-191 records the RSID used during the nested
+%address translation. The device identifier presented to the guest VM might be different
+%from the identifier used by the host, therefore, this field allows the host to override
+%the RSID for the guest.
+
+%\begin{figure}[ht!]
+%
+%    \begin{center}
+%        \begin{tabular}{@{}T@{}K}
+%        \instbitrange{63}{44} &
+%        \instbitrange{43}{0} \\
+%        \hline
+%        \multicolumn{1}{|c|}{Reserved} &
+%        \multicolumn{1}{ c|}{RPAddr} \\
+%        \hline
+%        20 & 44 \\
+%        \end{tabular}
+%    \end{center}
+%
+%    \caption{Stage One Control Field When S2MODE is not Zero}
+%    \label{fig:stage-one-bits-in-dev-tbl-entry}
+%\end{figure}
 
 \note When the IOMMU is active, i.e. \iommucapen.E = 1, the system software can set both
 S1MODE and S2MODE to zero to let a device access memory effectively with physical
@@ -348,8 +347,6 @@ descriptor. Its format is shown in Table \ref{tbl:desc_conf}.
     Bit 2 - 3  &  Host Address Table Walk Fault Configuration \\
     \hline
     Bit 4 - 5  &  Hypervisor Overrides \\
-    \hline
-    Bit 32 - [32+\rsidlen] & In-guest RSID \\
     \hline
 
     \end{tabular}
