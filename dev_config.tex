@@ -149,13 +149,37 @@ the address as-is.
 The S bit (which stands for the Second stage) controls whether the device whose RSID leads to
 the level-2 device table entry is subject to two-stages of address translation. If S bit
 is set, it is subjected to two-stages of translation. If S bit is clear, it is only
-subject to one-stage of translation.
+subject to one-stage of translation or no translation depending on the value of the F bit.
 
 The F bit (which stands for the First stage) controls whether the device whose RSID leads
 to the level-2 device table entry is subject to stage-one address translation. If F bit is
 set, stage-one address translation is enabled. If F bit is cleared, stage-one address
 translation is disabled, i.e., the address in the DMA transaction is used only with
-stage-two address translation.
+stage-two address translation or no translation depending on the value of the S bit.
+
+Table \ref{tbl:fbit-sbit-addr-trans} shows the address translation mode determined by the
+value of F bit and S bit.
+
+\begin{table}[h!t]
+    \centering
+    \begin{tabular}{ | c | c | l | }
+
+    \hline
+     F bit & S bit   &  Address Translation Stages \\
+    \hline
+     0     & 0       &  No address translation \\
+    \hline
+     1     & 0       &  Stage-1 address translation only \\
+    \hline
+     0     & 1       &  Stage-2 address translation only \\
+    \hline
+     1     & 1       &  Both stage-1 and stage-2 address translation \\
+    \hline
+
+    \end{tabular}
+    \caption{Address Translation Mode Controlled by F bit and S bit}
+    \label{tbl:fbit-sbit-addr-trans}
+\end{table}
 
 When \rsiddiv\ is zero, there is only one level of device table. The entries in the
 level-1 device table are the same as the level-2 device table when \rsiddiv\ is not zero.
