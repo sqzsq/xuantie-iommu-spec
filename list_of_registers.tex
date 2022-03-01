@@ -1,20 +1,35 @@
 \section{List of Registers}
 
 \subsection{Register MMIO Range}
-\begin{enumerate}
-    \item \iommucap\ Offset: 0
-    \item \rsiddiv\ Offset: 8
-    \item \ersiddiv\ Offset: 16
-    \item \dtbase\ Offset: 24
-    \item \ftval\ Offset: 32
-\end{enumerate}
+\begin{table}[!h]
+    \centering
+    \begin{tabular}{| l | l | l |}
+    \hline
+     Name & Offset & Permission\\
+    \hline
+      \iommucap\    &   0x0      &  R      \\
+      \rsiddiv\     &   0x8      &  R      \\
+      \ersiddiv\    &   0x10     &  R      \\
+      \dtbase\      &   0x18     &  RW     \\
+      \iommucause\  &   0x20     &  R      \\
+      \ftval\       &   0x28     &  R      \\
+    \hline
+    \end{tabular}
+\end{table}
 
 \subsection{Command MMIO Range}
 
-\begin{enumerate}
-    \item \iommucapen\ Offset: 0
-    \item \iommuinten\ Offset: 8
-    \item \invltlb\ Offset: 16
-    \item \resume\ Offset: 24
-\end{enumerate}
+\begin{table}[!h]
+    \centering
+    \begin{tabular}{| l | l | l |}
+    \hline
+     Name & Offset & Permission\\
+    \hline
+      \iommucapen\    &   0x0   &  RW   \\
+      \iommuinten\    &   0x8   &  RW   \\
+      \invltlb\       &   0x10  &  W    \\
+      \resume\        &   0x18  &  RW   \\
+    \hline
+    \end{tabular}
+\end{table}
 

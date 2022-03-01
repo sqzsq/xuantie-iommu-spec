@@ -11,6 +11,8 @@ There are two 4K-aligned MMIO regions (the sizes are to be decided), one for acc
 translation-related register, called the \textit{register MMIO range}. The other is meant
 for controlling the runtime behavior of the IOMMU, called the \textit{command MMIO range}.
 
+\note The two ranges are recommended to reside next to each other.
+
 The rationale of this divided regions is that some registers ('data registers') contain
 data that the IOMMU utilize to carry out its function, mainly address translation.
 Meanwhile, other registers ('control registers') act as 'triggers' in the sense that they
